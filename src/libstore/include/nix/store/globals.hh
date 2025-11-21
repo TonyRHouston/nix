@@ -1469,9 +1469,6 @@ public:
     const ExternalBuilder * findExternalDerivationBuilderIfSupported(const Derivation & drv);
 };
 
-// FIXME: don't use a global variable.
-extern Settings settings;
-
 /**
  * Load the configuration (from `nix.conf`, `NIX_CONFIG`, etc.) into the
  * given configuration object.

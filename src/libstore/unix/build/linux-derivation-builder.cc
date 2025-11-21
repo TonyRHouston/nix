@@ -25,7 +25,7 @@
 
 namespace nix {
 
-static void setupSeccomp()
+static void setupSeccomp(const Settings & settings)
 {
     if (!settings.filterSyscalls)
         return;
@@ -162,9 +162,9 @@ struct LinuxDerivationBuilder : virtual DerivationBuilderImpl
 
     void enterChroot() override
     {
-        setupSeccomp();
+        setupSeccomp(store.config->settings);
 
-        linux::setPersonality(drv.platform);
+        linux::setPersonality(store.config->settings, drv.platform);
     }
 };
 
@@ -216,12 +216,13 @@ struct ChrootLinuxDerivationBuilder : ChrootDerivationBuilder, LinuxDerivationBu
 
     std::unique_ptr<UserLock> getBuildUser() override
     {
-        return acquireUserLock(settings.buildUsersGroup, drvOptions.useUidRange(drv) ? 65536 : 1, true);
+        return acquireUserLock(
+            store.config->settings, settings.buildUsersGroup, drvOptions.useUidRange(drv) ? 65536 : 1, true);
     }
 
     void prepareUser() override
     {
-        if ((buildUser && buildUser->getUIDCount() != 1) || settings.useCgroups) {
+        if ((buildUser && buildUser->getUIDCount() != 1) || store.config->settings.useCgroups) {
             experimentalFeatureSettings.require(Xp::Cgroups);
 
             /* If we're running from the daemon, then this will return the

@@ -214,7 +214,8 @@ struct AutoUserLock : UserLock
     }
 };
 
-std::unique_ptr<UserLock> acquireUserLock(const std::string & userGroup, uid_t nrIds, bool useUserNamespace)
+std::unique_ptr<UserLock>
+acquireUserLock(const Settings & settings, const std::string & userGroup, uid_t nrIds, bool useUserNamespace)
 {
     if (auto * uidSettings = settings.getAutoAllocateUidSettings()) {
         auto userPoolDir = settings.nixStateDir / "userpool2";
@@ -227,7 +228,7 @@ std::unique_ptr<UserLock> acquireUserLock(const std::string & userGroup, uid_t n
     }
 }
 
-bool useBuildUsers()
+bool useBuildUsers(const Settings & settings)
 {
 #ifdef __linux__
     static bool b = (settings.buildUsersGroup != "" || settings.autoAllocateUids) && isRootUser();

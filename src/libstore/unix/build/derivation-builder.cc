@@ -236,7 +236,7 @@ protected:
      */
     virtual std::unique_ptr<UserLock> getBuildUser()
     {
-        return acquireUserLock(settings.buildUsersGroup, 1, false);
+        return acquireUserLock(settings, settings.buildUsersGroup, 1, false);
     }
 
     /**
@@ -696,7 +696,7 @@ static void checkNotWorldWritable(std::filesystem::path path)
 
 std::optional<Descriptor> DerivationBuilderImpl::startBuild()
 {
-    if (useBuildUsers()) {
+    if (useBuildUsers(settings)) {
         if (!buildUser)
             buildUser = getBuildUser();
 
@@ -1462,7 +1462,7 @@ SingleDrvOutputs DerivationBuilderImpl::registerOutputs()
            rewriting doesn't contain a hard link to /etc/shadow or
            something like that. */
         canonicalisePathMetaData(
-            actualPath, buildUser ? std::optional(buildUser->getUIDRange()) : std::nullopt, inodesSeen);
+            settings, actualPath, buildUser ? std::optional(buildUser->getUIDRange()) : std::nullopt, inodesSeen);
 
         bool discardReferences = false;
         if (auto udr = get(drvOptions.unsafeDiscardReferences, outputName)) {
@@ -1584,7 +1584,7 @@ SingleDrvOutputs DerivationBuilderImpl::registerOutputs()
 
                 /* FIXME: set proper permissions in restorePath() so
                    we don't have to do another traversal. */
-                canonicalisePathMetaData(actualPath, {}, inodesSeen);
+                canonicalisePathMetaData(settings, actualPath, {}, inodesSeen);
             }
         };
 
@@ -1741,7 +1741,7 @@ SingleDrvOutputs DerivationBuilderImpl::registerOutputs()
 
         /* FIXME: set proper permissions in restorePath() so
             we don't have to do another traversal. */
-        canonicalisePathMetaData(actualPath, {}, inodesSeen);
+        canonicalisePathMetaData(settings, actualPath, {}, inodesSeen);
 
         /* Calculate where we'll move the output files. In the checking case we
            will leave leave them where they are, for now, rather than move to
@@ -1992,6 +1992,8 @@ std::unique_ptr<DerivationBuilder, DerivationBuilderDeleter> makeDerivationBuild
     LocalStore & store, std::unique_ptr<DerivationBuilderCallbacks> miscMethods, DerivationBuilderParams params)
 {
     bool useSandbox = false;
+
+    auto & settings = store.config->settings;
 
     /* Are we doing a sandboxed build? */
     {

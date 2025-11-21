@@ -77,10 +77,6 @@ LogFileSettings::LogFileSettings()
 {
 }
 
-Settings settings;
-
-static GlobalConfig::Register rSettings(&settings);
-
 Settings::Settings()
     : nixStore(
 #ifndef _WIN32
