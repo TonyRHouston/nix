@@ -402,10 +402,9 @@ StringSet S3BinaryCacheStoreConfig::uriSchemes()
     return {"s3"};
 }
 
-S3BinaryCacheStoreConfig::S3BinaryCacheStoreConfig(
-    std::string_view scheme, std::string_view _cacheUri, const Params & params)
+S3BinaryCacheStoreConfig::S3BinaryCacheStoreConfig(const ParsedURL & cacheUri_, const Params & params)
     : StoreConfig(params)
-    , HttpBinaryCacheStoreConfig(scheme, _cacheUri, params)
+    , HttpBinaryCacheStoreConfig(cacheUri_, params)
 {
     assert(cacheUri.query.empty());
     assert(cacheUri.scheme == "s3");
@@ -439,6 +438,12 @@ S3BinaryCacheStoreConfig::S3BinaryCacheStoreConfig(
             renderSize(multipartThreshold.get()),
             renderSize(multipartChunkSize.get()));
     }
+}
+
+S3BinaryCacheStoreConfig::S3BinaryCacheStoreConfig(std::string_view bucketName, const Params & params)
+    : S3BinaryCacheStoreConfig(
+          ParsedURL{.scheme = "s3", .authority = ParsedURL::Authority{.host = std::string(bucketName)}}, params)
+{
 }
 
 std::string S3BinaryCacheStoreConfig::getHumanReadableURI() const

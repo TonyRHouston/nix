@@ -18,15 +18,13 @@ StringSet HttpBinaryCacheStoreConfig::uriSchemes()
     return ret;
 }
 
-HttpBinaryCacheStoreConfig::HttpBinaryCacheStoreConfig(
-    std::string_view scheme, std::string_view _cacheUri, const Params & params)
+HttpBinaryCacheStoreConfig::HttpBinaryCacheStoreConfig(const ParsedURL & cacheUri_, const Params & params)
     : StoreConfig(params)
     , BinaryCacheStoreConfig(params)
-    , cacheUri(parseURL(
-          std::string{scheme} + "://"
-          + (!_cacheUri.empty() ? _cacheUri
-                                : throw UsageError("`%s` Store requires a non-empty authority in Store URL", scheme))))
+    , cacheUri(cacheUri_)
 {
+    if (!uriSchemes().contains("file") && (!cacheUri.authority || cacheUri.authority->host.empty()))
+        throw UsageError("`%s` Store requires a non-empty authority in Store URL", cacheUri_.scheme);
     while (!cacheUri.path.empty() && cacheUri.path.back() == "")
         cacheUri.path.pop_back();
 }

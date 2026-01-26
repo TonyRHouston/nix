@@ -36,8 +36,7 @@ void HttpsBinaryCacheStoreTest::SetUp()
     delTmpDir = std::make_unique<AutoDelete>(tmpDir);
 
     localCacheStore =
-        make_ref<LocalBinaryCacheStoreConfig>("file", cacheDir.string(), LocalBinaryCacheStoreConfig::Params{})
-            ->openStore();
+        make_ref<LocalBinaryCacheStoreConfig>(cacheDir, LocalBinaryCacheStoreConfig::Params{})->openStore();
 
     caCert = tmpDir / "ca.crt";
     caKey = tmpDir / "ca.key";
@@ -117,7 +116,12 @@ std::vector<std::string> HttpsBinaryCacheStoreMtlsTest::serverArgs()
 
 ref<TestHttpBinaryCacheStoreConfig> HttpsBinaryCacheStoreTest::makeConfig(BinaryCacheStoreConfig::Params params)
 {
-    auto res = make_ref<TestHttpBinaryCacheStoreConfig>("https", fmt("localhost:%d", port), std::move(params));
+    auto res = make_ref<TestHttpBinaryCacheStoreConfig>(
+        ParsedURL{
+            .scheme = "https",
+            .authority = ParsedURL::Authority{.host = "localhost", .port = port},
+        },
+        std::move(params));
     res->pathInfoCacheSize = 0; /* We don't want any caching in tests. */
     return res;
 }
