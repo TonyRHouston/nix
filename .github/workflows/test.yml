@@ -1,14 +1,18 @@
-name: "Test"
+name: Test
 on:
-  pull_request:
-  push:
+  pull_request: null
+  push: null
 jobs:
   tests:
     strategy:
       matrix:
-        os: [ubuntu-18.04, macos]
-    runs-on: ${{ matrix.os }}
+        os:
+        - ubuntu-18.04
+        - macos
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - uses: cachix/install-nix-action@v8
-    - run: nix-build release.nix --arg nix '{ outPath = ./.; revCount = 123; shortRev = "abcdefgh"; }' --arg systems '[ builtins.currentSystem ]' -A installerScript -A perlBindings
+    - run: nix-build release.nix --arg nix '{ outPath = ./.; revCount = 123; shortRev
+        = "abcdefgh"; }' --arg systems '[ builtins.currentSystem ]' -A installerScript
+        -A perlBindings
