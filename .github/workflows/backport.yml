@@ -11,7 +11,7 @@ jobs:
       pull-requests: write
     if: github.repository_owner == 'NixOS' && github.event.pull_request.merged ==
       true && (github.event_name != 'labeled' || startsWith('backport', github.event.label.name))
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     steps:
     - name: Generate GitHub App token
       id: generate-token
