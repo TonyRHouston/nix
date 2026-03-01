@@ -1,14 +1,11 @@
-name: "CI"
-
+name: CI
 on:
-  pull_request:
-  push:
-
+  pull_request: null
+  push: null
 permissions: read-all
-
 jobs:
   eval:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
       with:
@@ -16,25 +13,23 @@ jobs:
     - uses: ./.github/actions/install-nix-action
       with:
         dogfood: false
-        extra_nix_config:
-          experimental-features = nix-command flakes
+        extra_nix_config: experimental-features = nix-command flakes
         github_token: ${{ secrets.GITHUB_TOKEN }}
         use_cache: false
     - run: nix flake show --all-systems --json
-
   tests:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - scenario: on ubuntu
-            runs-on: ubuntu-24.04
-            os: linux
-          - scenario: on macos
-            runs-on: macos-14
-            os: darwin
+        - scenario: on ubuntu
+          runs-on: ubuntu-24.04
+          os: linux
+        - scenario: on macos
+          runs-on: macos-14
+          os: darwin
     name: tests ${{ matrix.scenario }}
-    runs-on: ${{ matrix.runs-on }}
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
     - uses: actions/checkout@v4
@@ -44,12 +39,11 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         dogfood: false
-        # The sandbox would otherwise be disabled by default on Darwin
-        extra_nix_config: |
-          sandbox = true
+        extra_nix_config: 'sandbox = true
+
           max-jobs = 1
-    # Since ubuntu 22.30, unprivileged usernamespaces are no longer allowed to map to the root user:
-    # https://ubuntu.com/blog/ubuntu-23-10-restricted-unprivileged-user-namespaces
+
+          '
     - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       if: matrix.os == 'linux'
     - run: scripts/build-checks
@@ -59,21 +53,21 @@ jobs:
       with:
         name: installer-${{matrix.os}}
         path: out/*
-
   installer_test:
-    needs: [tests]
+    needs:
+    - tests
     strategy:
       fail-fast: false
       matrix:
         include:
-          - scenario: on ubuntu
-            runs-on: ubuntu-24.04
-            os: linux
-          - scenario: on macos
-            runs-on: macos-14
-            os: darwin
+        - scenario: on ubuntu
+          runs-on: ubuntu-24.04
+          os: linux
+        - scenario: on macos
+          runs-on: macos-14
+          os: darwin
     name: installer test ${{ matrix.scenario }}
-    runs-on: ${{ matrix.runs-on }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: Download installer tarball
@@ -86,8 +80,8 @@ jobs:
       run: ./scripts/serve-installer-for-github-actions
     - uses: cachix/install-nix-action@v31
       with:
-        install_url: 'http://localhost:8126/install'
-        install_options: "--tarball-url-prefix http://localhost:8126/"
+        install_url: http://localhost:8126/install
+        install_options: --tarball-url-prefix http://localhost:8126/
     - run: sudo apt install fish zsh
       if: matrix.os == 'linux'
     - run: brew install fish
@@ -96,12 +90,14 @@ jobs:
     - run: exec sh -c "nix-instantiate -E 'builtins.currentTime' --eval"
     - run: exec zsh -c "nix-instantiate -E 'builtins.currentTime' --eval"
     - run: exec fish -c "nix-instantiate -E 'builtins.currentTime' --eval"
-    - run: exec bash -c "nix-channel --add https://releases.nixos.org/nixos/unstable/nixos-23.05pre466020.60c1d71f2ba nixpkgs"
+    - run: exec bash -c "nix-channel --add https://releases.nixos.org/nixos/unstable/nixos-23.05pre466020.60c1d71f2ba
+        nixpkgs"
     - run: exec bash -c "nix-channel --update && nix-env -iA nixpkgs.hello && hello"
-
   docker_push_image:
     name: Push docker image to DockerHub and GHCR
-    needs: [tests, vm_tests]
+    needs:
+    - tests
+    - vm_tests
     if: github.event_name == 'push' && github.ref_name == 'master'
     uses: ./.github/workflows/docker-push.yml
     with:
@@ -113,45 +109,38 @@ jobs:
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-
   vm_tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/install-nix-action
-        with:
-          dogfood: false
-          extra_nix_config:
-            experimental-features = nix-command flakes
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-      - run: |
-          nix build -L \
-            .#hydraJobs.tests.functional_user \
-            .#hydraJobs.tests.githubFlakes \
-            .#hydraJobs.tests.nix-docker \
-            .#hydraJobs.tests.tarballFlakes \
-            ;
-
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/install-nix-action
+      with:
+        dogfood: false
+        extra_nix_config: experimental-features = nix-command flakes
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+    - run: "nix build -L \\\n  .#hydraJobs.tests.functional_user \\\n  .#hydraJobs.tests.githubFlakes\
+        \ \\\n  .#hydraJobs.tests.nix-docker \\\n  .#hydraJobs.tests.tarballFlakes\
+        \ \\\n  ;\n"
   flake_regressions:
     needs: vm_tests
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout nix
-        uses: actions/checkout@v4
-      - name: Checkout flake-regressions
-        uses: actions/checkout@v4
-        with:
-          repository: NixOS/flake-regressions
-          path: flake-regressions
-      - name: Checkout flake-regressions-data
-        uses: actions/checkout@v4
-        with:
-          repository: NixOS/flake-regressions-data
-          path: flake-regressions/tests
-      - uses: ./.github/actions/install-nix-action
-        with:
-          dogfood: false
-          extra_nix_config:
-            experimental-features = nix-command flakes
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-      - run: nix build -L --out-link ./new-nix && PATH=$(pwd)/new-nix/bin:$PATH MAX_FLAKES=25 flake-regressions/eval-all.sh
+    - name: Checkout nix
+      uses: actions/checkout@v4
+    - name: Checkout flake-regressions
+      uses: actions/checkout@v4
+      with:
+        repository: NixOS/flake-regressions
+        path: flake-regressions
+    - name: Checkout flake-regressions-data
+      uses: actions/checkout@v4
+      with:
+        repository: NixOS/flake-regressions-data
+        path: flake-regressions/tests
+    - uses: ./.github/actions/install-nix-action
+      with:
+        dogfood: false
+        extra_nix_config: experimental-features = nix-command flakes
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+    - run: nix build -L --out-link ./new-nix && PATH=$(pwd)/new-nix/bin:$PATH MAX_FLAKES=25
+        flake-regressions/eval-all.sh
