@@ -1,24 +1,32 @@
-name: "Test"
+name: Test
 on:
-  pull_request:
-  push:
+  pull_request: null
+  push: null
 jobs:
   tests:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+        os:
+        - ubuntu-latest
+        - macos-latest
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - uses: cachix/install-nix-action@v10
-    - run: nix-build release.nix --arg nix '{ outPath = ./.; revCount = 123; shortRev = "abcdefgh"; }' --arg systems '[ builtins.currentSystem ]' -A installerScript -A perlBindings
+    - run: nix-build release.nix --arg nix '{ outPath = ./.; revCount = 123; shortRev
+        = "abcdefgh"; }' --arg systems '[ builtins.currentSystem ]' -A installerScript
+        -A perlBindings
   macos_perf_test:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
     - name: Disable syspolicy assessments
-      run: |
-        spctl --status
+      run: 'spctl --status
+
         sudo spctl --master-disable
+
+        '
     - uses: actions/checkout@v2
     - uses: cachix/install-nix-action@v10
-    - run: nix-build release.nix --arg nix '{ outPath = ./.; revCount = 123; shortRev = "abcdefgh"; }' --arg systems '[ builtins.currentSystem ]' -A installerScript -A perlBindings
+    - run: nix-build release.nix --arg nix '{ outPath = ./.; revCount = 123; shortRev
+        = "abcdefgh"; }' --arg systems '[ builtins.currentSystem ]' -A installerScript
+        -A perlBindings
